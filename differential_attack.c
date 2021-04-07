@@ -39,6 +39,21 @@ void generate_difference_distribution_table()
 	printf("\n");
 }
 
+/*
+ * Performs the differential attack as described in the paper.
+ * The plaintext difference input 0x0B00 is used. The input to the last round s-boxes will be 0x0606
+ * with probability 27/1024.
+ *
+ * We generate 5000 plaintexts pairs satisfying the desired input differential.
+ *
+ * For each pair, the ciphertext differential is partially decrypted using the target partial subkey value.
+ * When the input to the last round satisfies the characteristic, the count for that target partial subkey 
+ * is increment. Every possible target subkey is tried (256 possibilities).
+ */
+uint16_t differential_attack(size_t partial_subkey_counts[256])
+{
+}
+
 int main(void)
 {
 	uint16_t final_round_subkey = cipher_init();
