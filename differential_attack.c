@@ -53,8 +53,9 @@ void generate_difference_distribution_table()
  * differential_attack() takes an array to be populated with the counts for each target subkey, and returns
  * the key determinted to be most likely to true partial subkey.
  */
-uint16_t differential_attack(size_t * partial_subkey_counts)
+uint8_t differential_attack(size_t * partial_subkey_counts)
 {
+	printf("Attacking cipher...\n");
 	// Input plaintext differential
 	uint16_t delta_p = 0x0B00;
 	for (int i = 0; i < 5000; ++i)
@@ -94,12 +95,21 @@ uint16_t differential_attack(size_t * partial_subkey_counts)
 
 	// find max occurance of target subkey and return that key
 	size_t max = partial_subkey_counts[0];
+	uint8_t key = 0;
+
 	for (int i = 1; i < 256; ++i)
 	{
-		if (partial_subkey_counts[i] > max) { max = partial_subkey_counts[i]; }
+		if (partial_subkey_counts[i] > max)
+		{
+			max = partial_subkey_counts[i];
+			key = i;
+		}
 	}
 
-	return max;
+	printf("Attack complete. Found partial subkey (%x, %x) with count %zu\n\n", 
+			(key & 0xF0) >> 4, (key & 0x0F), max);
+
+	return key;
 }
 
 int main(void)
@@ -118,13 +128,16 @@ int main(void)
 	generate_difference_distribution_table();
 
 	size_t partial_target_subkey_counts[256] = {};
-	uint16_t max = differential_attack(partial_target_subkey_counts);
-	printf("max count: %u\n", max);
-
+	uint8_t key = differential_attack(partial_target_subkey_counts);
+	printf("True partial subkey bits: (%x, %x)\n", (final_round_subkey & 0x0F00) >> 8,
+												 (final_round_subkey & 0x000F));
+	printf("Recovered key: (%x, %x) | count: %zu\n", (key & 0xF0) >> 4,
+												   (key & 0x0F), partial_target_subkey_counts[key]);
+/*
 	for (int i = 0; i < 256; ++i)
 	{
 		printf("Key: %2x | Count:%3zu\n", i, partial_target_subkey_counts[i]);
 	}
-
+*/
 	return 0;
 }
