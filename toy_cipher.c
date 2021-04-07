@@ -96,8 +96,9 @@ static uint16_t permute_forward(uint16_t input)
 
 /*
  * Perform an inverse substitution pass through an s-box
+ * This function is not static to allow for the partial decryption in the differential attack.
  */
-static uint16_t sub_inverse(uint16_t input)
+uint16_t sub_inverse(uint16_t input)
 {
 	uint16_t output = 0;
 	for (int n = 0; n < 4; ++n)
