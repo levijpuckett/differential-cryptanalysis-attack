@@ -68,7 +68,7 @@ uint16_t cipher_init()
 }
 
 /*
- * Perform a forward pass through an s-box
+ * Perform a forward substitution pass through an s-box
  */
 static uint16_t sub_forward(uint16_t input)
 {
@@ -80,6 +80,9 @@ static uint16_t sub_forward(uint16_t input)
 	return output;
 }
 
+/*
+ * Perform an forward permutation pass through an s-box
+ */
 static uint16_t permute_forward(uint16_t input)
 {
 	uint16_t output = 0;
@@ -92,7 +95,7 @@ static uint16_t permute_forward(uint16_t input)
 }
 
 /*
- * Perform an inverse pass through an s-box
+ * Perform an inverse substitution pass through an s-box
  */
 static uint16_t sub_inverse(uint16_t input)
 {
@@ -104,6 +107,9 @@ static uint16_t sub_inverse(uint16_t input)
 	return output;
 }
 
+/*
+ * Perform an inverse permutation pass through an s-box
+ */
 static uint16_t permute_inverse(uint16_t input)
 {
 	uint16_t output = 0;
@@ -160,4 +166,20 @@ uint16_t cipher_decrypt(uint16_t ciphertext)
 	}
 
 	return p;
+}
+
+/*
+ * Generate difference count of each delta_y given delta_x.
+ * count must point to an array of size 16.
+ *
+ * This function generates one row of the difference distribution table.
+ */
+void difference_pair_count(uint8_t delta_x, size_t * count)
+{
+	for (uint8_t x = 0; x < 0xF + 1; ++x)
+	{
+		uint8_t y1 = sub_forward(x);
+		uint8_t y2 = sub_forward(x ^ delta_x);
+		count[y1^y2]++;
+	}
 }
