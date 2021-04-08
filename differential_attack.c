@@ -3,6 +3,9 @@
 
 #include "toy_cipher.h"
 
+/*
+ * Simple test of the cipher structure: encrypt and decrypt every possible plaintext
+ */
 void test_cipher(void)
 {
 	for (int i = 0; i < 0xFFFF+1; ++i)
@@ -14,6 +17,10 @@ void test_cipher(void)
 	}
 }
 
+/*
+ * Generate and display the difference distribution table for the s-box 
+ * in the toy cipher (every s-box is the same in our cipher)
+ */
 void generate_difference_distribution_table()
 {
 	printf("\n\nDifference Distribution Table\n");
@@ -50,9 +57,12 @@ void generate_difference_distribution_table()
  * When the input to the last round satisfies the characteristic, the count for that target partial subkey 
  * is incremented. Every possible target subkey is tried (256 possibilities).
  *
- * differential_attack() takes an array to be populated with the counts for each target subkey, and the 
- * number of plaintext pairs to generate for the attack.
- * It returns the key determinted to be most likely to true partial subkey.
+ * Parameters:
+ * partial_subkey_counts - an array to be populated with the counts for each target subkey.
+ * iterations - number of plaintext pairs to generate for the attack.
+ * 
+ * Returns:
+ * The key determinted to be most likely to true partial subkey.
  */
 uint8_t differential_attack(size_t * partial_subkey_counts, size_t iterations)
 {
@@ -63,7 +73,7 @@ uint8_t differential_attack(size_t * partial_subkey_counts, size_t iterations)
 
 	for (int i = 0; i < iterations; ++i)
 	{
-		// generate a plaintext input pair
+		// generate a plaintext input pair with difference delta_p
 		uint16_t p1 = (uint16_t) rand();
 		uint16_t p2 = p1 ^ delta_p;
 
@@ -110,6 +120,7 @@ uint8_t differential_attack(size_t * partial_subkey_counts, size_t iterations)
 		}
 	}
 
+	// output results
 	printf("Attack complete. Found partial subkey (%x, %x) with count %zu\n\n", 
 			(key & 0xF0) >> 4, (key & 0x0F), max);
 
@@ -118,6 +129,7 @@ uint8_t differential_attack(size_t * partial_subkey_counts, size_t iterations)
 
 int main(void)
 {
+	// Initialize the cipher and get the final round key (which we will attempt to recover a portion of)
 	uint16_t final_round_subkey = cipher_init();
 	printf("Final round subkey: %x\n", final_round_subkey);
 
@@ -125,15 +137,20 @@ int main(void)
 	// test cipher with many different keys.
 	for (int i = 0; i < 200; ++i)
 	{
-		test_cipher();
-		cipher_init();
+		test_cipher(); // test on every plaintext
+		cipher_init(); // new keys
 	}
 	*/
+
+	// Output the difference distribution table
 	generate_difference_distribution_table();
 
 	size_t partial_target_subkey_counts[256] = {};
 	size_t iterations = 5000;
+
+	// recover a shard of the final round key
 	uint8_t key = differential_attack(partial_target_subkey_counts, iterations);
+
 	printf("True partial subkey bits: (%x, %x)\n", (final_round_subkey & 0x0F00) >> 8,
 												 (final_round_subkey & 0x000F));
 	printf("Recovered key: (%x, %x) | count: %zu\n", (key & 0xF0) >> 4,

@@ -1,27 +1,35 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <time.h>
+#include <time.h> // to seed rand
 
+// lookup table for s-box substitutions (forward)
+// maps every possible input to the 4x4 s-box to every output
 static const uint8_t s_box_substitution[] = { 
 	0xE, 0x4, 0xD, 0x1,
 	0x2, 0xF, 0xB, 0x8,
 	0x3, 0xA, 0x6, 0xC,
 	0x5, 0x9, 0x0, 0x7 };
 
+// lookup table for s-box substitutions (inverse, constructed at runtime)
 static uint8_t s_box_substitution_inverse[16] = {};
 
+// lookup table for s-box permutations (forward)
+// maps each bit to the correct output bit (16 possible inputs)
 static const uint8_t s_box_permutation[] = {
 	 0,  4,  8, 12,
 	 1,  5,  9, 13,
 	 2,  6, 10, 14,
 	 3,  7, 11, 15 };
 
+// lookup table for s-box permutations (inverse, constructed at runtime)
 static uint8_t s_box_permutation_inverse[16] = {};
 
+// 4-round cipher
 static const uint8_t cipher_num_rounds = 4;
 
 static const size_t num_keys = cipher_num_rounds + 1; // +1 for last round key
+// store the key for each round of the cipher
 static uint16_t round_keys[num_keys] = {};
 
 /*
@@ -43,6 +51,7 @@ uint16_t cipher_init()
 	}
 
 	printf("\n\nBuilding inverse s-box permutation:\n");
+	// invert permutation
 	for (int i = 0; i < 16; ++i)
 	{
 		s_box_permutation_inverse[s_box_permutation[i]] = i;
@@ -53,7 +62,7 @@ uint16_t cipher_init()
 	}
 
 	printf("\nGenerating keys...\n");
-	srand(time(NULL));
+	srand(time(NULL)); // seed rand
 	for (int i = 0; i < num_keys; ++i)
 	{
 		// init 5 round keys
@@ -75,13 +84,15 @@ static uint16_t sub_forward(uint16_t input)
 	uint16_t output = 0;
 	for (int n = 0; n < 4; ++n)
 	{
+		// for each of the 4 s-boxes, mask out the appropriate bits and find the
+		// corresponding s-box substitution
 		output |= s_box_substitution[(input & (0xF << n*4)) >> n*4] << n*4;
 	}
 	return output;
 }
 
 /*
- * Perform an forward permutation pass through an s-box
+ * Perform a forward permutation pass through an s-box
  */
 static uint16_t permute_forward(uint16_t input)
 {
@@ -103,6 +114,8 @@ uint16_t sub_inverse(uint16_t input)
 	uint16_t output = 0;
 	for (int n = 0; n < 4; ++n)
 	{
+		// for each of the 4 s-boxes, mask out the appropriate bits and find the
+		// corresponding s-box substitution
 		output |= s_box_substitution_inverse[(input & (0xF << n*4)) >> n*4] << n*4;
 	}
 	return output;
@@ -116,7 +129,7 @@ static uint16_t permute_inverse(uint16_t input)
 	uint16_t output = 0;
 	for (int j = 0; j < 16; j++)
 	{
-		// get jth bit, send to position indicated in s_box_permutation
+		// get jth bit, send to position indicated in s_box_permutation_inverse
 		output |= ((input & (1 << j)) >> j) << s_box_permutation_inverse[j];
 	}
 	return output;
@@ -140,8 +153,11 @@ uint16_t cipher_encrypt(uint16_t plaintext)
 		c = permute_forward(c);
 	}
 	// last round has no permutation.
+	// mix with round key
 	c ^= round_keys[num_keys - 2];
+	// s-box substitution
 	c = sub_forward(c);
+	// final round key mixing
 	c ^= round_keys[num_keys - 1];
 
 	return c;
@@ -160,9 +176,11 @@ uint16_t cipher_decrypt(uint16_t ciphertext)
 
 	for (int i = cipher_num_rounds - 2; i >= 0; --i)
 	{
-		
+		// invert the permutation
 		p = permute_inverse(p);
+		// invert the substitution
 		p = sub_inverse(p);
+		// unmix with the round key
 		p ^= round_keys[i];
 	}
 
@@ -179,8 +197,10 @@ void difference_pair_count(uint8_t delta_x, size_t * count)
 {
 	for (uint8_t x = 0; x < 0xF + 1; ++x)
 	{
+		// find the substitutions to form delta_y
 		uint8_t y1 = sub_forward(x);
 		uint8_t y2 = sub_forward(x ^ delta_x);
+		// increment the count for delta_y (given delta_x)
 		count[y1^y2]++;
 	}
 }
