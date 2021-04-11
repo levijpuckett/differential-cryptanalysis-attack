@@ -81,11 +81,12 @@ uint8_t differential_attack(size_t * partial_subkey_counts, size_t iterations)
 		uint16_t c1 = cipher_encrypt(p1);
 		uint16_t c2 = cipher_encrypt(p2);
 
-		// For every possible target partial subkey, partially decrypt ciphertext to find right/wrong pairs.
-		for (unsigned int k = 0; k < 256; ++k)
+		// only compute the input to the last round if all other s-box outputs are 0
+		if (((c1 ^ c2) & 0xF0F0) == 0)
 		{
-			// only compute the input to the last round if all other s-box outputs are 0
-			if (((c1 ^ c2) & 0xF0F0) == 0)
+			// For every possible target partial subkey,
+			// partially decrypt ciphertext to find right/wrong pairs.
+			for (unsigned int k = 0; k < 256; ++k)
 			{
 				// split k to get the top and bottom half of the target partial subkey
 				// 0xab -> 0x0a0b to line up with the relevant s-boxes.
